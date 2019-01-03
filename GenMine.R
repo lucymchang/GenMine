@@ -22,7 +22,7 @@ GenMine <- function(taxa, gene, batch = 10, retmax = 500, rettotal = "all", dir 
     warning("No api_key. Request frequency is limited to 3 per second (as opposed to 10 per second). API key can be obtained from Settings page of NCBI account (http://www.ncbi.nlm.nih.gov/account/).")
     api_key <- ""
   }else{
-    api_key <- paste0("$api_key=", api_key)
+    api_key <- paste0("&api_key=", api_key)
   }
   
   dir <- gsub("/$", "", dir)
@@ -48,10 +48,14 @@ GenMine <- function(taxa, gene, batch = 10, retmax = 500, rettotal = "all", dir 
       cat(paste(gen, which(taxa == taxa.sub[1]), "to", which(taxa == taxa.sub[length(taxa.sub)]), "of", length(taxa), "taxa;", Sys.time(), "\n"))
       
       for(taxon in taxa.sub){
+        
+        # add a small break to minimize chances that NCBI will return 429 (too many requests) error
+        Sys.sleep(slow)
+        
         orgn <- paste0(taxon, "[orgn]")
         query <- paste(orgn, gen, sep = "+AND+")
         results <- read_xml(paste0(base, "esearch.fcgi?db=nucleotide&term=", query, "&usehistory=y&webEnv=", webEnv, api_key))
-        results <- as_list(results)$eSearchResult
+        results <- as_list(results)
         webEnv <- results[["WebEnv"]][[1]]
         key <- c(key, results[["QueryKey"]][[1]])
         count <- c(count, as.numeric(results[["Count"]][[1]]))
@@ -74,9 +78,6 @@ GenMine <- function(taxa, gene, batch = 10, retmax = 500, rettotal = "all", dir 
           while(retstart < rettotal.fin){
             
             closeAllConnections()
-            
-            # add a small break to minimize chances that NCBI will return 429 (too many requests) error
-            Sys.sleep(slow)
             
             # sequences is either a successful read or NA
             # NA means that batch failed to download
